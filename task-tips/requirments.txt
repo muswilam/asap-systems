@@ -1,0 +1,12 @@
+
+
+Create an API using Entity Framework (C# .NET Core)  with the following: 
+
+   1. Create CRUD Operation Endpoint for Person and Address (make sure using service layer and Repository Pattern )
+   2. Create Endpoint for Filter persons and Address with at least two parameters 
+   3. Validate mandatory attributes 
+   4. JWT for handling authentication
+   5. Handling authorization for endpoint
+   6. Handling exception for request and response 
+
+Note : Test your endpoint with postman and save URL for each endpoint 
