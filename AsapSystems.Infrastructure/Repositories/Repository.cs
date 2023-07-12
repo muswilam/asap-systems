@@ -50,6 +50,13 @@ namespace AsapSystems.Infrastructure.Repositories
             await _dbSet.AddRangeAsync(entities);
         }
 
+        public void Update(T entity) 
+        {
+            _dbSet.Attach(entity);
+
+            _context.Entry(entity).State = EntityState.Modified;
+        }
+
         public void Remove(T entity)
         {
             _dbSet.Remove(entity);

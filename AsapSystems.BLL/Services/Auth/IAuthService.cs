@@ -5,6 +5,6 @@ namespace AsapSystems.BLL.Services.Auth
 {
     public interface IAuthService
     {
-        Task<Response<bool>> RegisterAsync(RegisterDto registerDto);
+        Task<Response<TokenResultDto>> RegisterAsync(RegisterDto registerDto);
     }
 }

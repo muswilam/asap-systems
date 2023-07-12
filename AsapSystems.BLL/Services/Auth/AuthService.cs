@@ -4,6 +4,12 @@ using AsapSystems.BLL.Helpers.ResponseHandler;
 using AsapSystems.Core;
 using AsapSystems.Core.Entities;
 using AsapSystems.Core.Enums;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using System.Security.Claims;
+using AsapSystems.BLL.Dtos.Settings;
+using Microsoft.Extensions.Options;
 
 namespace AsapSystems.BLL.Services.Auth
 {
@@ -11,23 +17,27 @@ namespace AsapSystems.BLL.Services.Auth
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IPasswordHasher _passwordHasher;
+        private readonly AuthSetting _authSetting;
 
-        public AuthService(IUnitOfWork unitOfWork, IPasswordHasher passwordHasher)
+        public AuthService(IUnitOfWork unitOfWork,
+                           IPasswordHasher passwordHasher,
+                           IOptions<AuthSetting> authSettingOptions)
         {
             _unitOfWork = unitOfWork;
             _passwordHasher = passwordHasher;
+            _authSetting = authSettingOptions.Value;
         }
 
-        public async Task<Response<bool>> RegisterAsync(RegisterDto registerDto)
+        public async Task<Response<TokenResultDto>> RegisterAsync(RegisterDto registerDto)
         {
-            var response = new Response<bool>();
+            var response = new Response<TokenResultDto>();
 
             try
             {
                 // validation.
                 var validationResult = await IsRegisterValidAsync(registerDto);
 
-                if(!validationResult.IsSuccess)
+                if (!validationResult.IsSuccess)
                     return response.AddErrors(validationResult.Errors);
 
                 // hash password.
@@ -43,9 +53,21 @@ namespace AsapSystems.BLL.Services.Auth
                 };
 
                 await _unitOfWork.PersonRepository.AddAsync(person);
-                await _unitOfWork.CommitAsync();
-                
+
                 // create jwt token.
+                var generatedJwtToken = await GenerateJwtTokenAsync(person);
+
+                var generatedRefreshToken = await GenerateRefreshTokenAsync(generatedJwtToken.Jti, person.Id);
+
+                await _unitOfWork.CommitAsync();
+
+                var tokenResultDto = new TokenResultDto
+                {
+                    Token = generatedJwtToken.Token,
+                    RefreshToken = generatedRefreshToken.Token
+                };
+
+                response.Data = tokenResultDto;
 
                 return response;
             }
@@ -60,22 +82,189 @@ namespace AsapSystems.BLL.Services.Auth
         {
             var response = new Response<bool>();
 
-            if(string.IsNullOrEmpty(registerDto.Name))
+            if (string.IsNullOrEmpty(registerDto.Name))
                 response.AddError("Name is required", nameof(registerDto.Name));
 
-            if(string.IsNullOrEmpty(registerDto.Email))
+            if (string.IsNullOrEmpty(registerDto.Email))
                 response.AddError("Email is required", nameof(registerDto.Email));
 
-            if(string.IsNullOrEmpty(registerDto.Password))
+            if (string.IsNullOrEmpty(registerDto.Password))
                 response.AddError("Password is required", nameof(registerDto.Password));
 
-            if(!Enum.IsDefined(typeof(GenderEnum), registerDto.GenderId))
+            if (!Enum.IsDefined(typeof(GenderEnum), registerDto.GenderId))
                 response.AddError("Invalid gender.", nameof(registerDto.GenderId));
 
-            if(await _unitOfWork.PersonRepository.AnyAsync(p => p.Email.ToLower().Equals(registerDto.Email.ToLower())))
+            if (await _unitOfWork.PersonRepository.AnyAsync(p => p.Email.ToLower().Equals(registerDto.Email.ToLower())))
                 response.AddError("Email is already exist.", nameof(registerDto.Email));
 
             return response;
+        }
+        #endregion
+
+        #region Jwt Token Helpers.
+        private async Task<JwtTokenDto> GenerateJwtTokenAsync(Person person)
+        {
+            return await Task.Run(() =>
+            {
+                var jwtTokenHandler = new JwtSecurityTokenHandler();
+
+                var key = Encoding.ASCII.GetBytes(_authSetting.Jwt.Secret);
+
+                var tokenDescriptor = new SecurityTokenDescriptor
+                {
+                    Issuer = _authSetting.Jwt.Issuer,
+                    Subject = new ClaimsIdentity(new List<Claim>
+                    {
+                        new Claim(TokenClaimTypeEnum.Id.ToString(), person.Id.ToString()),
+                        new Claim(JwtRegisteredClaimNames.Email, person.Email),
+                        new Claim(JwtRegisteredClaimNames.Sub, person.Email),
+                        new Claim(TokenClaimTypeEnum.Name.ToString(), person.Name),
+
+                        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                    }),
+                    Expires = DateTime.UtcNow.Add(_authSetting.Jwt.TokenExpiryTime),
+                    SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+                };
+
+                var token = jwtTokenHandler.CreateToken(tokenDescriptor);
+
+                var jwtToken = jwtTokenHandler.WriteToken(token);
+
+                return new JwtTokenDto
+                {
+                    Jti = token.Id,
+                    Token = jwtToken,
+                };
+            });
+        }
+
+        private async Task<RefreshToken> GenerateRefreshTokenAsync(string jti, int personId)
+        {
+            var refreshToken = new RefreshToken
+            {
+                Jti = jti,
+                PersonId = personId,
+                ExpireDate = DateTime.UtcNow.AddMonths(_authSetting.Jwt.RefreshToken.RefreshTokenExpiryInMonths),
+                CreateDate = DateTime.UtcNow,
+                Token = $"{GenerateRandom(_authSetting.Jwt.RefreshToken.TokenLength)}{Guid.NewGuid()}"
+            };
+
+            await _unitOfWork.RefreshTokenRepository.AddAsync(refreshToken);
+
+            return refreshToken;
+        }
+
+        private async Task<string> UpdateRefreshTokenAsync(RefreshToken refreshToken, string jti)
+        {
+            refreshToken.Jti = jti;
+            refreshToken.Token = $"{GenerateRandom(_authSetting.Jwt.RefreshToken.TokenLength)}{Guid.NewGuid()}";
+            refreshToken.ModifiedDate = DateTime.UtcNow;
+
+            _unitOfWork.RefreshTokenRepository.Update(refreshToken);
+            await _unitOfWork.CommitAsync();
+
+            return refreshToken.Token;
+        }
+
+        private async Task<Response<RefreshToken>> VerifyTokenAsync(RefreshTokenDto refreshTokenDto,
+                                                                    TokenValidationParameters tokenValidationParameters)
+        {
+            var response = new Response<RefreshToken>();
+
+            try
+            {
+                var jwtTokenHandler = new JwtSecurityTokenHandler();
+
+                // prevent validate token lifetime.
+                tokenValidationParameters.ValidateLifetime = false;
+
+                // 01- Validate token is a propper jwt token formatting.
+                var claimsPrincipal = jwtTokenHandler.ValidateToken(refreshTokenDto.Token, tokenValidationParameters, out var validatedToken);
+
+                // 02- Validate token has been encrypted using the encryption that we've specified. 
+                if (validatedToken is JwtSecurityToken jwtSecurityToken)
+                {
+                    var isSameEncryption = jwtSecurityToken.Header
+                                                           .Alg
+                                                           .Equals(SecurityAlgorithms.HmacSha256,
+                                                                   StringComparison.InvariantCultureIgnoreCase);
+
+                    if (!isSameEncryption)
+                    {
+                        response.AddError("Invalid token.");
+
+                        // reset lifetime to valdiate it.
+                        tokenValidationParameters.ValidateLifetime = true;
+                        return response;
+                    }
+                }
+
+                // Todo-Sully: check validated token is not jwtSecurityToken.
+
+                // 03- Validate token expiry date.
+                var utcLongExpiryDate = long.Parse(claimsPrincipal.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Exp).Value);
+
+                var expiryDate = UnixTimeStampToDateTime(utcLongExpiryDate);
+
+                if (expiryDate > DateTime.UtcNow)
+                {
+                    response.AddError("Token not expired yet.");
+
+                    // reset lifetime to valdiate it.
+                    tokenValidationParameters.ValidateLifetime = true;
+                    return response;
+                }
+
+                // 04- Validate actual token stored in database.
+                var storedToken = await _unitOfWork.RefreshTokenRepository.SingleOrDefaultAsync(rt => rt.Token == refreshTokenDto.RefreshToken);
+
+                if (storedToken is null)
+                {
+                    response.AddError("Token not found.", nameof(refreshTokenDto.RefreshToken));
+
+                    // reset lifetime to valdiate it.
+                    tokenValidationParameters.ValidateLifetime = true;
+                    return response;
+                }
+
+                // 07- Validate jwt token Jti matches refresh token jti in database.
+                var jti = claimsPrincipal.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Jti).Value;
+
+                if (!storedToken.Jti.Equals(jti))
+                {
+                    response.AddError("Mismatch tokens.");
+
+                    // reset lifetime to valdiate it.
+                    tokenValidationParameters.ValidateLifetime = true;
+                    return response;
+                }
+
+                response.Data = storedToken;
+            }
+            catch (Exception ex)
+            {
+                response.AddError("Invalid token.");
+            }
+
+            // reset lifetime to valdiate it.
+            tokenValidationParameters.ValidateLifetime = true;
+            return response;
+        }
+
+        private string GenerateRandom(int length)
+        {
+            var random = new Random();
+
+            return new string(Enumerable.Repeat(_authSetting.Jwt.RefreshToken.Chars, length)
+                                        .Select(s => s[random.Next(s.Length)])
+                                        .ToArray());
+        }
+
+        private DateTime UnixTimeStampToDateTime(long unixTimeStamp)
+        {
+            // utc time is an integer (long) number of seconds from the 1970/1/1 till now. 
+            var datetimeVal = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+            return datetimeVal.AddSeconds(unixTimeStamp).ToUniversalTime();
         }
         #endregion
     }

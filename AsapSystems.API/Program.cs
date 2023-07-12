@@ -1,3 +1,5 @@
+using System.Text;
+using AsapSystems.BLL.Dtos.Settings;
 using AsapSystems.BLL.Helpers.Security;
 using AsapSystems.BLL.Services.Auth;
 using AsapSystems.Core;
@@ -5,7 +7,9 @@ using AsapSystems.Core.Repositories;
 using AsapSystems.Infrastructure;
 using AsapSystems.Infrastructure.Context;
 using AsapSystems.Infrastructure.Repositories;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +22,40 @@ builder.Services.AddScoped<IPersonRepository, PersonRepository>();
 builder.Services.AddScoped<IAddressRepository, AddressRepository>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
+
+#region Authentication
+builder.Services.Configure<AuthSetting>(builder.Configuration.GetSection("AuthSetting"));
+
+var key = Encoding.ASCII.GetBytes(builder.Configuration[$"{nameof(AuthSetting)}:{nameof(AuthSetting.Jwt)}:{nameof(AuthSetting.Jwt.Secret)}"]);
+var issuer = builder.Configuration[$"{nameof(AuthSetting)}:{nameof(AuthSetting.Jwt)}:{nameof(AuthSetting.Jwt.Issuer)}"];
+
+var tokenValidationParams = new TokenValidationParameters
+{
+    ValidateIssuerSigningKey = true,
+    IssuerSigningKey = new SymmetricSecurityKey(key),
+    ValidateIssuer = true,
+    ValidateAudience = false,
+    ValidateLifetime = true,
+    ValidIssuer = issuer,
+    RequireExpirationTime = true,
+    ClockSkew = TimeSpan.Zero // remove delay of token when expire
+};
+
+builder.Services.AddSingleton(tokenValidationParams);
+
+builder.Services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(jwt =>
+        {
+            jwt.SaveToken = true;
+            jwt.TokenValidationParameters = tokenValidationParams;
+        });
+#endregion
+
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -40,6 +78,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

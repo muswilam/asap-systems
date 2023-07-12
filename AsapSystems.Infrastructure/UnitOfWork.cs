@@ -10,16 +10,18 @@ namespace AsapSystems.Infrastructure
       
         public UnitOfWork(AsapContext context,
                           IPersonRepository personRepository,
-                          IAddressRepository addressRepository)
+                          IAddressRepository addressRepository,
+                          IRefreshTokenRepository refreshTokenRepository)
         {
             _context = context;
             PersonRepository = personRepository;
             AddressRepository = addressRepository;
+            RefreshTokenRepository = refreshTokenRepository;
         }
 
         public IPersonRepository PersonRepository { get; }
-
         public IAddressRepository AddressRepository { get; }
+        public IRefreshTokenRepository RefreshTokenRepository { get; }
 
         public void Commit() =>
             _context.SaveChanges();

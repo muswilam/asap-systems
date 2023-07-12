@@ -4,6 +4,6 @@ namespace AsapSystems.Core.Enums
     {
         None = 1,
         Male = 2,
-        Female = 3   
+        Female = 3
     }
 }

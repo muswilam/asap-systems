@@ -6,6 +6,7 @@ namespace AsapSystems.Core
     {
         IPersonRepository PersonRepository { get; }
         IAddressRepository AddressRepository { get; }
+        IRefreshTokenRepository RefreshTokenRepository { get; }
 
         void Commit();
         Task CommitAsync();

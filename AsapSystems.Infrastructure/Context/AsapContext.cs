@@ -23,5 +23,6 @@ namespace AsapSystems.Infrastructure.Context
         public DbSet<Person> Persons { get; set; }
         public DbSet<Gender> Genders { get; set; }
         public DbSet<Address> Addresses { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
     }
 }
