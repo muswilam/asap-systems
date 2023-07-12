@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using AsapSystems.Core.Repositories;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,6 +15,11 @@ namespace AsapSystems.Infrastructure.Repositories
             _dbSet = _context.Set<T>();
         }
 
+        public async Task<bool> AnyAsync(Expression<Func<T, bool>> predicate)
+        {
+            return await _dbSet.AnyAsync(predicate);
+        }
+
         public async Task<T> GetAsync(int id)
         {
             return await _dbSet.FindAsync(id);
@@ -24,12 +30,12 @@ namespace AsapSystems.Infrastructure.Repositories
             return await _dbSet.ToListAsync();
         }
 
-        public IEnumerable<T> Where(System.Linq.Expressions.Expression<Func<T, bool>> predicate)
+        public IEnumerable<T> Where(Expression<Func<T, bool>> predicate)
         {
             return _dbSet.Where(predicate);
         }
 
-        public async Task<T> SingleOrDefaultAsync(System.Linq.Expressions.Expression<Func<T, bool>> predicate)
+        public async Task<T> SingleOrDefaultAsync(Expression<Func<T, bool>> predicate)
         {
             return await _dbSet.SingleOrDefaultAsync(predicate);
         }
