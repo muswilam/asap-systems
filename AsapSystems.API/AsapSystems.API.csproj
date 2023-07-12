@@ -17,6 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\AsapSystems.Core\AsapSystems.Core.csproj" />
     <ProjectReference Include="..\AsapSystems.Infrastructure\AsapSystems.Infrastructure.csproj" />
+    <ProjectReference Include="..\AsapSystems.BLL\AsapSystems.BLL.csproj" />
   </ItemGroup>
 
 </Project>
