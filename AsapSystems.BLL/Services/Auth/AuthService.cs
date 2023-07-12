@@ -61,14 +61,126 @@ namespace AsapSystems.BLL.Services.Auth
 
                 await _unitOfWork.CommitAsync();
 
-                var tokenResultDto = new TokenResultDto
+                response.Data = new TokenResultDto
                 {
                     Token = generatedJwtToken.Token,
-                    RefreshToken = generatedRefreshToken.Token
+                    RefreshToken = generatedRefreshToken
                 };
 
-                response.Data = tokenResultDto;
+                return response;
+            }
+            catch (Exception ex)
+            {
+                return response.AddError("Internal error.");
+            }
+        }
 
+        public async Task<Response<TokenResultDto>> LoginAsync(LoginDto loginDto)
+        {
+            var response = new Response<TokenResultDto>();
+
+            try
+            {
+                var validation = IsLoginValid(loginDto);
+
+                if (!validation.IsSuccess)
+                    return response.AddErrors(validation.Errors);
+
+                var person = await _unitOfWork.PersonRepository.SingleOrDefaultAsync(p => p.Email.ToLower().Equals(loginDto.Email.ToLower()));
+
+                if (person is null)
+                    return response.AddError("Invalid credentials.");
+
+                var isPasswordVerified = _passwordHasher.VerifyHashedPassword(loginDto.Password, person.Password);
+
+                if (isPasswordVerified)
+                    return response.AddError("Invalid credentials.");
+
+                var generatedJwtToken = await GenerateJwtTokenAsync(person);
+
+                var generatedRefreshToken = await GenerateRefreshTokenAsync(generatedJwtToken.Jti, person.Id);
+
+                await _unitOfWork.CommitAsync();
+
+                response.Data = new TokenResultDto
+                {
+                    Token = generatedJwtToken.Token,
+                    RefreshToken = generatedRefreshToken
+                };
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                return response.AddError("Internal error.");
+            }
+        }
+
+        public async Task<Response<TokenResultDto>> RefreshTokenAsync(RefreshTokenDto refreshTokenDto, TokenValidationParameters tokenValidationParameters)
+        {
+            var response = new Response<TokenResultDto>();
+
+            try
+            {
+                var validation = IsRefreshTokenValid(refreshTokenDto);
+
+                if (!validation.IsSuccess)
+                    return response.AddErrors(validation.Errors);
+
+                var verifyTokenResult = await VerifyTokenAsync(refreshTokenDto, tokenValidationParameters);
+
+                if (!verifyTokenResult.IsSuccess)
+                    return response.AddErrors(verifyTokenResult.Errors);
+
+                var storedToken = verifyTokenResult.Data;
+
+                // generate new tokens.
+                var person = await _unitOfWork.PersonRepository.SingleOrDefaultAsync(e => e.Id == storedToken.PersonId);
+
+                if (person is null)
+                    return response.AddError("Person is not found", nameof(person));
+
+                var newJwtToken = await GenerateJwtTokenAsync(person);
+
+                var newRefreshToken = await UpdateRefreshTokenAsync(storedToken, newJwtToken.Jti);
+
+                response.Data = new TokenResultDto
+                {
+                    Token = newJwtToken.Token,
+                    RefreshToken = newRefreshToken
+                };
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                return response.AddError("Internal error.");
+            }
+        }
+
+        public async Task<Response<bool>> LogoutAsync(LogoutDto logoutDto)
+        {
+            var response = new Response<bool>();
+
+            try
+            {
+                var validation = IsLogoutValid(logoutDto);
+
+                if (!validation.IsSuccess)
+                    return response.AddErrors(validation.Errors);
+
+                var existRefreshToken = await _unitOfWork.RefreshTokenRepository.SingleOrDefaultAsync(rt => rt.Token == logoutDto.RefreshToken);
+
+                if (existRefreshToken is null)
+                {
+                    response.AddError("Refresh token is not found.", nameof(logoutDto.RefreshToken));
+                    return response;
+                }
+
+                _unitOfWork.RefreshTokenRepository.Remove(existRefreshToken);
+                await _unitOfWork.CommitAsync();
+
+                response.Data = true;
                 return response;
             }
             catch (Exception ex)
@@ -97,6 +209,46 @@ namespace AsapSystems.BLL.Services.Auth
             if (await _unitOfWork.PersonRepository.AnyAsync(p => p.Email.ToLower().Equals(registerDto.Email.ToLower())))
                 response.AddError("Email is already exist.", nameof(registerDto.Email));
 
+            response.Data = true;
+            return response;
+        }
+
+        public Response<bool> IsLoginValid(LoginDto loginDto)
+        {
+            var response = new Response<bool>();
+
+            if (string.IsNullOrEmpty(loginDto.Email))
+                response.AddError("Email is required", nameof(loginDto.Email));
+
+            if (string.IsNullOrEmpty(loginDto.Password))
+                response.AddError("Password is required", nameof(loginDto.Password));
+
+            response.Data = true;
+            return response;
+        }
+
+        public Response<bool> IsRefreshTokenValid(RefreshTokenDto refreshTokenDto)
+        {
+            var response = new Response<bool>();
+
+            if (string.IsNullOrEmpty(refreshTokenDto.Token))
+                response.AddError("Token is required", nameof(refreshTokenDto.Token));
+
+            if (string.IsNullOrEmpty(refreshTokenDto.RefreshToken))
+                response.AddError("Refresh token is required", nameof(refreshTokenDto.RefreshToken));
+
+            response.Data = true;
+            return response;
+        }
+
+        public Response<bool> IsLogoutValid(LogoutDto logoutDto)
+        {
+            var response = new Response<bool>();
+
+            if (string.IsNullOrEmpty(logoutDto.RefreshToken))
+                response.AddError("Refresh token is required", nameof(logoutDto.RefreshToken));
+
+            response.Data = true;
             return response;
         }
         #endregion
@@ -138,7 +290,7 @@ namespace AsapSystems.BLL.Services.Auth
             });
         }
 
-        private async Task<RefreshToken> GenerateRefreshTokenAsync(string jti, int personId)
+        private async Task<string> GenerateRefreshTokenAsync(string jti, int personId)
         {
             var refreshToken = new RefreshToken
             {
@@ -151,7 +303,7 @@ namespace AsapSystems.BLL.Services.Auth
 
             await _unitOfWork.RefreshTokenRepository.AddAsync(refreshToken);
 
-            return refreshToken;
+            return refreshToken.Token;
         }
 
         private async Task<string> UpdateRefreshTokenAsync(RefreshToken refreshToken, string jti)
