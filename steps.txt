@@ -1,0 +1,17 @@
+
+
+1. build project structure:
+	I Domain (core)
+		- Entities.
+		- Repositories Declarations (Interfaces).
+		- UnitOfWork Declaration.	
+	II Persistence (infrastruction)
+		- Migrations.
+		- Repositories Implementation (classes).
+		- UnitOfWork Implementation.
+		- DB Context.
+	III Service (bll)
+		- Declarations and implementations.
+	IV API
+		- endpoints.
+	

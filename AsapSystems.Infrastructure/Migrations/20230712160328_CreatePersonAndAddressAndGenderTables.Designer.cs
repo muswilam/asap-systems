@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AsapSystems.Infrastructure.Migrations
 {
     [DbContext(typeof(AsapContext))]
-    [Migration("20230711215145_CreatePersonAndAddressAndGenderTables")]
+    [Migration("20230712160328_CreatePersonAndAddressAndGenderTables")]
     partial class CreatePersonAndAddressAndGenderTables
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

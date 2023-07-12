@@ -1,7 +1,6 @@
 using AsapSystems.Core.Entities;
 using AsapSystems.Core.Enums;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Design;
 
 namespace AsapSystems.Infrastructure.Context
 {
@@ -24,21 +23,5 @@ namespace AsapSystems.Infrastructure.Context
         public DbSet<Person> Persons { get; set; }
         public DbSet<Gender> Genders { get; set; }
         public DbSet<Address> Addresses { get; set; }
-    }
-
-    public class AsapFactory : IDesignTimeDbContextFactory<AsapContext>
-    {
-        public AsapFactory()
-        {
-            
-        }
-
-        public AsapContext CreateDbContext(string[] args)
-        {
-            var optionsBuilder = new DbContextOptionsBuilder<AsapContext>();
-            optionsBuilder.UseSqlServer("Data source=.;initial catalog=AsapDB;Integrated security=True;MultipleActiveResultSets=True;");
-
-            return new AsapContext(optionsBuilder.Options);
-        }
     }
 }
