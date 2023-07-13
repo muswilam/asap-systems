@@ -57,7 +57,7 @@ namespace AsapSystems.BLL.Services.Auth
                 // create jwt token.
                 var generatedJwtToken = await GenerateJwtTokenAsync(person);
 
-                var generatedRefreshToken = await GenerateRefreshTokenAsync(generatedJwtToken.Jti, person.Id);
+                var generatedRefreshToken = await GenerateRefreshTokenAsync(generatedJwtToken.Jti, person);
 
                 await _unitOfWork.CommitAsync();
 
@@ -93,12 +93,12 @@ namespace AsapSystems.BLL.Services.Auth
 
                 var isPasswordVerified = _passwordHasher.VerifyHashedPassword(loginDto.Password, person.Password);
 
-                if (isPasswordVerified)
+                if (!isPasswordVerified)
                     return response.AddError("Invalid credentials.");
 
                 var generatedJwtToken = await GenerateJwtTokenAsync(person);
 
-                var generatedRefreshToken = await GenerateRefreshTokenAsync(generatedJwtToken.Jti, person.Id);
+                var generatedRefreshToken = await GenerateRefreshTokenAsync(generatedJwtToken.Jti, person);
 
                 await _unitOfWork.CommitAsync();
 
@@ -290,12 +290,12 @@ namespace AsapSystems.BLL.Services.Auth
             });
         }
 
-        private async Task<string> GenerateRefreshTokenAsync(string jti, int personId)
+        private async Task<string> GenerateRefreshTokenAsync(string jti, Person person)
         {
             var refreshToken = new RefreshToken
             {
                 Jti = jti,
-                PersonId = personId,
+                Person = person,
                 ExpireDate = DateTime.UtcNow.AddMonths(_authSetting.Jwt.RefreshToken.RefreshTokenExpiryInMonths),
                 CreateDate = DateTime.UtcNow,
                 Token = $"{GenerateRandom(_authSetting.Jwt.RefreshToken.TokenLength)}{Guid.NewGuid()}"
