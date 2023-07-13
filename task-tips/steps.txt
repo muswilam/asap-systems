@@ -5,6 +5,7 @@
 		- Entities.
 		- Repositories Declarations (Interfaces).
 		- UnitOfWork Declaration.	
+		- Any Other Abstraction.
 	II Persistence (infrastruction)
 		- Migrations.
 		- Repositories Implementation (classes).
@@ -15,3 +16,22 @@
 	IV API
 		- endpoints.
 	
+2. Implement custom repositories.
+
+3. Implement Auth Service:
+	- Register, Login, Refresh Token, Logout
+	- Using JWT Token.
+	- Authorize all endpoints except auth endpoints.
+
+4. Implement Person Service:
+	- Get persons with filter, search, pagination.
+
+5. Implement Address Service:
+	- All CRUD operations: 
+		* Get addresses with filter, search, pagination.
+		* Get by id.
+		* Create.
+		* Update.
+		* Delete.
+
+6. Implement validation (Just focus on required inputs and business validation.)
