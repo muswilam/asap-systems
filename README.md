@@ -1,6 +1,6 @@
 
 
-NOTE ==> To create databse:
+To create databse:
 
 CLI:
 
@@ -27,7 +27,7 @@ Steps:
             - UnitOfWork Implementation.
             - DB Context.
         III Service (bll)
-            - Declarations and implementations.
+            - Business Logic. (Declarations and implementations.)
         IV API
             - endpoints.
     
@@ -48,3 +48,5 @@ Steps:
             * Delete.
 
     5. Implement validation. (Just focus on required inputs and business validation.)
+
+    6. Configure swagger authorization header to could use token on swagger.
