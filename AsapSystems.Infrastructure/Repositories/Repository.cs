@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using AsapSystems.Core.Repositories;
+using AsapSystems.Infrastructure.Helpers;
 using Microsoft.EntityFrameworkCore;
 
 namespace AsapSystems.Infrastructure.Repositories
@@ -33,6 +34,11 @@ namespace AsapSystems.Infrastructure.Repositories
         public IEnumerable<T> Where(Expression<Func<T, bool>> predicate)
         {
             return _dbSet.Where(predicate);
+        }
+
+        public IQueryable<T> WhereIf(Expression<Func<T, bool>> predicate, bool isValid) 
+        {
+            return _dbSet.WhereIf(predicate, isValid);
         }
 
         public async Task<T> SingleOrDefaultAsync(Expression<Func<T, bool>> predicate)

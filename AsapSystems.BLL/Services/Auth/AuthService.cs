@@ -49,7 +49,8 @@ namespace AsapSystems.BLL.Services.Auth
                     Name = registerDto.Name,
                     Email = registerDto.Email,
                     Password = hashedPassword,
-                    GenderId = registerDto.GenderId
+                    GenderId = registerDto.GenderId,
+                    CreateDate = DateTime.UtcNow
                 };
 
                 await _unitOfWork.PersonRepository.AddAsync(person);

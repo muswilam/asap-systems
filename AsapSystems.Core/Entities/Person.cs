@@ -10,9 +10,9 @@ namespace AsapSystems.Core.Entities
 
         public int GenderId { get; set; }
 
-        public DateTime? BirthDate { get; set; }
+        public DateTime CreateDate { get; set; }
 
-        public DateTime? CreateDate { get; set; }
+        public DateTime? BirthDate { get; set; }
 
         public DateTime? ModifiedDate { get; set; }
 

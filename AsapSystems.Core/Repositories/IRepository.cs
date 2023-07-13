@@ -9,6 +9,7 @@ namespace AsapSystems.Core.Repositories
         Task<T> GetAsync(int id);
         Task<IEnumerable<T>> GetAllAsync();
         IEnumerable<T> Where(Expression<Func<T, bool>> predicate);
+        IQueryable<T> WhereIf(Expression<Func<T, bool>> predicate, bool isValid);
         Task<T> SingleOrDefaultAsync(Expression<Func<T, bool>> predicate);
 
         Task AddAsync(T entity);
