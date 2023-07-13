@@ -2,6 +2,7 @@ using System.Text;
 using AsapSystems.BLL.Dtos.Settings;
 using AsapSystems.BLL.Helpers.Security;
 using AsapSystems.BLL.Services.Auth;
+using AsapSystems.BLL.Services.Lookups;
 using AsapSystems.Core;
 using AsapSystems.Core.Repositories;
 using AsapSystems.Infrastructure;
@@ -22,8 +23,10 @@ builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<IPersonRepository, PersonRepository>();
 builder.Services.AddScoped<IAddressRepository, AddressRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+builder.Services.AddScoped<IGenderRepository, GenderRepository>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ILookupService, LookupService>();
 
 #region Authentication
 builder.Services.Configure<AuthSetting>(builder.Configuration.GetSection("AuthSetting"));
