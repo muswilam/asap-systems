@@ -4,6 +4,7 @@ using AsapSystems.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AsapSystems.Infrastructure.Migrations
 {
     [DbContext(typeof(AsapContext))]
-    partial class AsapContextModelSnapshot : ModelSnapshot
+    [Migration("20230713161733_MakeBuildingNumberAndApartmentNumberNullableInAddress")]
+    partial class MakeBuildingNumberAndApartmentNumberNullableInAddress
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -47,23 +49,10 @@ namespace AsapSystems.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("CreateBy")
-                        .HasColumnType("int");
+                    b.Property<bool>("IsMainAddress")
+                        .HasColumnType("bit");
 
-                    b.Property<DateTime>("CreateDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("ModifiedBy")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("ModifiedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("PersonId")
+                    b.Property<int?>("PersonId")
                         .HasColumnType("int");
 
                     b.Property<string>("Street")
@@ -150,6 +139,9 @@ namespace AsapSystems.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
 
+                    b.Property<DateTime?>("BirthDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("CreateDate")
                         .HasColumnType("datetime2");
 
@@ -159,6 +151,9 @@ namespace AsapSystems.Infrastructure.Migrations
 
                     b.Property<int>("GenderId")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -218,15 +213,11 @@ namespace AsapSystems.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("AsapSystems.Core.Entities.Person", "Person")
+                    b.HasOne("AsapSystems.Core.Entities.Person", null)
                         .WithMany("Addresses")
-                        .HasForeignKey("PersonId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("PersonId");
 
                     b.Navigation("AddressType");
-
-                    b.Navigation("Person");
                 });
 
             modelBuilder.Entity("AsapSystems.Core.Entities.Person", b =>

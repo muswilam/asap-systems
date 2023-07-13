@@ -7,7 +7,7 @@ namespace AsapSystems.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class PersonController : ControllerBase
+public class PersonController : BaseController
 {
     private readonly IPersonService _personService;
 
@@ -16,7 +16,6 @@ public class PersonController : ControllerBase
         _personService = personService;
     }
 
-    [AllowAnonymous]
     [HttpGet("GetPersons")]
     public async Task<IActionResult> GetPersonsByFilterAsync([FromQuery]PersonFilterDto filterDto)
     {

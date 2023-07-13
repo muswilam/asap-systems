@@ -4,6 +4,7 @@ using AsapSystems.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AsapSystems.Infrastructure.Migrations
 {
     [DbContext(typeof(AsapContext))]
-    partial class AsapContextModelSnapshot : ModelSnapshot
+    [Migration("20230713164910_AddNavigationPropertiesForPersonInAddress")]
+    partial class AddNavigationPropertiesForPersonInAddress
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -52,6 +54,9 @@ namespace AsapSystems.Infrastructure.Migrations
 
                     b.Property<DateTime>("CreateDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsMainAddress")
+                        .HasColumnType("bit");
 
                     b.Property<int?>("ModifiedBy")
                         .HasColumnType("int");
@@ -150,6 +155,9 @@ namespace AsapSystems.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
 
+                    b.Property<DateTime?>("BirthDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("CreateDate")
                         .HasColumnType("datetime2");
 
@@ -159,6 +167,9 @@ namespace AsapSystems.Infrastructure.Migrations
 
                     b.Property<int>("GenderId")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Name")
                         .IsRequired()

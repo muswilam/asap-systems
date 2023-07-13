@@ -12,10 +12,6 @@ namespace AsapSystems.Core.Entities
 
         public DateTime CreateDate { get; set; }
 
-        public DateTime? BirthDate { get; set; }
-
-        public DateTime? ModifiedDate { get; set; }
-
         // nav props.
         public Gender Gender { get; set; }
 
